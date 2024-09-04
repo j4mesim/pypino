@@ -1,8 +1,8 @@
-
 from time import time
 from socket import gethostname
 from os import getpid
 from json import dumps
+import sys 
 
 
 class PyPino:
@@ -33,19 +33,12 @@ class PyPino:
         if showVersion is not None:
             self.__base["v"] = showVersion
 
-        # if "level" in opts:
-        #     self.level(opts["level"])
-        # base = {
-        #     "hostname": gethostname(),
-        #     "pid": getpid(),
-        # }
-        # if "base" in opts:
-        #     base = opts["base"]
-        # if "name" in opts:
-        #     base["name"] = opts["name"]
-        # if "showVersion" in opts:
-        #     base["v"] = opts["showVersion"]
-        # self.__base = base
+    def format(self, level, *args):
+        print(self.sformat(level, *args))
+        sys.stdout.flush()
+
+    def sformat(self, level, *args):
+        return self.__output(level, *args)
 
     def __output(self, level, *args):
         args = list(args)
@@ -58,7 +51,7 @@ class PyPino:
             if key not in out:
                 out[key] = self.__base[key]
 
-        if len(args) > 0:
+        if len(args):
             # If first is a dict, pop it from the list and add each k/v to out
             if isinstance(args[0], dict):
                 obj_dict = args.pop(0)
@@ -79,19 +72,21 @@ class PyPino:
                 elif msg is None:
                     out["msg"] = None
 
-        print(dumps(out, separators=(",", ":")))
+        # return pformat(out)
+        return dumps(out)
+        # return dumps(out, separators=(",", ":"))
 
-    def trace(self, *args): self.__output(10, *args)
+    def trace(self, *args): self.format(10, *args)
 
-    def debug(self, *args): self.__output(20, *args)
+    def debug(self, *args): self.format(20, *args)
 
-    def info(self, *args): self.__output(30, *args)
+    def info(self, *args): self.format(30, *args)
 
-    def warn(self, *args): self.__output(40, *args)
+    def warn(self, *args): self.format(40, *args)
 
-    def error(self, *args): self.__output(50, *args)
+    def error(self, *args): self.format(50, *args)
 
-    def fatal(self, *args): self.__output(60, *args)
+    def fatal(self, *args): self.format(60, *args)
 
     def level(self, new_level=None):
         if new_level is not None:
@@ -100,3 +95,12 @@ class PyPino:
             if isinstance(new_level, str) and new_level in self.__level_map:
                 self.__level_threshold = self.__level_map[new_level]
         return self.__level_threshold
+
+    def child(self, child_kv):
+        base = self.__base.copy()
+        for key in child_kv:
+            base[key] = child_kv[key]
+        opts = {"base": base}
+        if "name" in base:
+            opts["name"] = base["name"]
+        return PyPino(opts)
